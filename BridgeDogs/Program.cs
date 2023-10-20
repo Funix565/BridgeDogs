@@ -39,6 +39,7 @@ namespace BridgeDogs
 
                 var context = services.GetRequiredService<DogshouseContext>();
                 context.Database.EnsureCreated();
+                DbInitializer.Initialize(context);
             }
 
             app.UseAuthorization();
