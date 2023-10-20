@@ -7,10 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BridgeDogs.Data;
 using BridgeDogs.Models;
-
-
-// TODO: Rewrite using Repository
-// TODO: Pay attention to what I return. Preferable not just plain status code, but `CreatedAtAction`
+using BridgeDogs.Interfaces;
 
 namespace BridgeDogs.Controllers
 {
@@ -18,57 +15,65 @@ namespace BridgeDogs.Controllers
     [ApiController]
     public class DogsController : ControllerBase
     {
-        private readonly DogshouseContext _context;
+        private readonly IDogRepository _dogRepository;
 
-        public DogsController(DogshouseContext context)
+        public DogsController(IDogRepository dogRepository)
         {
-            _context = context;
+            _dogRepository = dogRepository;
         }
 
         // GET: /dogs
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Dog>>> GetDogs()
         {
-          if (_context.Dogs == null)
-          {
-              return NotFound();
-          }
-            return await _context.Dogs.ToListAsync();
+            var dogs = await _dogRepository.GetAllDogsAsync();
+            return Ok(dogs);
         }
 
         // POST: /dog
         [HttpPost]
         [Route("/dog")]
-        public async Task<ActionResult<Dog>> PostDog(Dog dog)
+        public async Task<ActionResult<Dog>> PostDog([FromBody] Dog dog)
         {
-          if (_context.Dogs == null)
-          {
-              return Problem("Entity set 'DogshouseContext.Dogs'  is null.");
-          }
-            _context.Dogs.Add(dog);
+            // TODO: How to test this case with Swagger or curl?
+            // TODO: How to handle invalid JSON? Now it just ignores random field and assigns default values
+            if (dog == null)
+            {
+                return BadRequest("Invalid JSON is passed in a request body.");
+            }
+
+            if (string.IsNullOrEmpty(dog.Name))
+            {
+                return BadRequest();
+            }
+
+            // TODO: How to handle a case when we pass text where number expected? I want to return my own message
+            if (dog.TailLength < 0)
+            {
+                return BadRequest("Tail length is a negative number.");
+            }
+
+            if (dog.Weight < 0)
+            {
+                return BadRequest("Weight is a negative number.");
+            }
+
+            if (await _dogRepository.DogExistsAsync(dog.Name))
+            {
+                return Conflict("Dog with the same name already exists in DB.");
+            }
+
             try
             {
-                await _context.SaveChangesAsync();
+                var createdDog = await _dogRepository.CreateDogAsync(dog);
+
+                // TODO: Hardcoded for now. Probably improve with CreatedAtAction.
+                return Created($"/dogs/{createdDog.Name}", createdDog);
             }
-            catch (DbUpdateException)
+            catch (Exception ex)
             {
-                if (DogExists(dog.Name))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
-
-            return StatusCode(StatusCodes.Status201Created);
-            // return CreatedAtAction("GetDog", new { id = dog.Name }, dog);
-        }
-
-        private bool DogExists(string id)
-        {
-            return (_context.Dogs?.Any(e => e.Name == id)).GetValueOrDefault();
         }
     }
 }

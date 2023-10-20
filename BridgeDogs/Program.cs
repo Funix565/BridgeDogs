@@ -1,5 +1,7 @@
 
 using BridgeDogs.Data;
+using BridgeDogs.Interfaces;
+using BridgeDogs.Repository;
 using Microsoft.EntityFrameworkCore;
 
 namespace BridgeDogs
@@ -13,6 +15,9 @@ namespace BridgeDogs
             // Add services to the container.
 
             builder.Services.AddControllers();
+
+            // Register Repository
+            builder.Services.AddScoped<IDogRepository, DogRepository>();
 
             // Register the database context
             builder.Services.AddDbContext<DogshouseContext>(options =>
