@@ -1,4 +1,7 @@
 
+using BridgeDogs.Data;
+using Microsoft.EntityFrameworkCore;
+
 namespace BridgeDogs
 {
     public class Program
@@ -10,6 +13,13 @@ namespace BridgeDogs
             // Add services to the container.
 
             builder.Services.AddControllers();
+
+            // Register the database context
+            builder.Services.AddDbContext<DogshouseContext>(options =>
+            {
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DogshouseContext"));
+            });
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -21,6 +31,14 @@ namespace BridgeDogs
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+            }
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+
+                var context = services.GetRequiredService<DogshouseContext>();
+                context.Database.EnsureCreated();
             }
 
             app.UseAuthorization();
