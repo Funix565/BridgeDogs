@@ -15,6 +15,7 @@ namespace BridgeDogs.Controllers
     [ApiController]
     public class DogsController : ControllerBase
     {
+        private readonly string[] DOG_FIELDS = { "name", "color", "tail_length", "weight" };
         private readonly IDogRepository _dogRepository;
 
         public DogsController(IDogRepository dogRepository)
@@ -24,9 +25,28 @@ namespace BridgeDogs.Controllers
 
         // GET: /dogs
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Dog>>> GetDogs()
+        public async Task<ActionResult<IEnumerable<Dog>>> GetDogs(
+            [FromQuery] string attribute = "name",
+            [FromQuery] string order = "asc",
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var dogs = await _dogRepository.GetAllDogsAsync();
+            if (!DOG_FIELDS.Contains(attribute.ToLower()))
+            {
+                return BadRequest($"No such attribute: {attribute}");
+            }
+
+            if (order.ToLower() != "asc" && order.ToLower() != "desc")
+            {
+                return BadRequest("Invalid order");
+            }
+
+            if (pageNumber < 0 || pageSize < 0)
+            {
+                return BadRequest("Negative pagination");
+            }
+
+            var dogs = await _dogRepository.GetAllDogsAsync(attribute, order, pageNumber, pageSize);
             return Ok(dogs);
         }
 
@@ -40,6 +60,11 @@ namespace BridgeDogs.Controllers
             if (dog == null)
             {
                 return BadRequest("Invalid JSON is passed in a request body.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("My message");
             }
 
             if (string.IsNullOrEmpty(dog.Name))
