@@ -1,7 +1,9 @@
 
 using BridgeDogs.Data;
 using BridgeDogs.Interfaces;
+using BridgeDogs.Models;
 using BridgeDogs.Repository;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace BridgeDogs
@@ -29,6 +31,19 @@ namespace BridgeDogs
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            var dogshouseOptions = new DogshouseRateLimitOptions();
+            var fixedPolicy = "fixed";
+
+            builder.Services.AddRateLimiter(limiterOptions =>
+            {
+                limiterOptions.RejectionStatusCode = dogshouseOptions.RejectionStatusCode;
+                limiterOptions.AddFixedWindowLimiter(policyName: fixedPolicy, options =>
+                {
+                    options.PermitLimit = dogshouseOptions.PermitLimit;
+                    options.Window = TimeSpan.FromSeconds(dogshouseOptions.Window);
+                });
+            });
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -49,8 +64,10 @@ namespace BridgeDogs
 
             app.UseAuthorization();
 
+            app.UseRateLimiter();
 
-            app.MapControllers();
+            app.MapControllers()
+                .RequireRateLimiting(fixedPolicy);
 
             app.Run();
         }
