@@ -10,10 +10,9 @@ namespace BridgeDogs.Controllers
         private const string VERSION = "Dogshouseservice.Version1.0.1";
 
         [HttpGet]
-        public string Ping()
+        public ContentResult Ping()
         {
-            // TODO: I guess we can use `Assembly` and Reflection here to avoid hardcoded string.
-            return VERSION;
+            return Content(VERSION);
         }
     }
 }
