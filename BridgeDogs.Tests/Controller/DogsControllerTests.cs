@@ -14,12 +14,26 @@ namespace BridgeDogs.Tests.Controller
         {
             // Arrange
             var mockRepository = new Mock<IDogRepository>();
-            mockRepository.Setup(repo => repo.GetAllDogsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new List<Dog> { new Dog { Name = "Flex", Color = "black", TailLength = 21, Weight = 67 } });
+            var dogParameters = new DogParameters
+            {
+                Attribute = "name",
+                OrderBy = "asc",
+                PageNumber = 1,
+                PageSize = 10
+            };
+
+            var validDogs = new List<Dog>
+            {
+                new Dog { Name = "Flex", Color = "black", TailLength = 21, Weight = 67 },
+                new Dog { Name = "Lex", Color = "black", TailLength = 15, Weight = 30 }
+            };
+
+            mockRepository.Setup(repo => repo.GetAllDogsAsync(dogParameters))
+                .ReturnsAsync(validDogs);
             var controller = new DogsController(mockRepository.Object);
 
             // Act
-            var result = await controller.GetDogs("name", "asc", 1, 10);
+            var result = await controller.GetDogs(dogParameters);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Dog>>>(result);
@@ -29,8 +43,7 @@ namespace BridgeDogs.Tests.Controller
             Assert.NotNull(result);
             Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
             Assert.NotNull(dogsList);
-            Assert.Single(dogsList);
-            Assert.Equal("Flex", dogsList[0].Name);
+            Assert.Equal(validDogs, dogsList);
         }
 
         [Fact]
@@ -39,9 +52,16 @@ namespace BridgeDogs.Tests.Controller
             // Arrange
             var mockRepository = new Mock<IDogRepository>();
             var controller = new DogsController(mockRepository.Object);
+            var dogParameters = new DogParameters
+            {
+                Attribute = "invalid_attribute",
+                OrderBy = "asc",
+                PageNumber = 1,
+                PageSize = 10
+            };
 
             // Act
-            var result = await controller.GetDogs("invalid_attribute", "asc", 1, 10);
+            var result = await controller.GetDogs(dogParameters);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Dog>>>(result);
@@ -49,7 +69,7 @@ namespace BridgeDogs.Tests.Controller
 
             Assert.NotNull(result);
             Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
-            Assert.Equal("No such attribute: invalid_attribute", badRequest.Value);
+            Assert.Equal("Invalid attribute or order", badRequest.Value);
         }
 
         [Fact]
@@ -58,9 +78,16 @@ namespace BridgeDogs.Tests.Controller
             // Arrange
             var mockRepository = new Mock<IDogRepository>();
             var controller = new DogsController(mockRepository.Object);
+            var dogParameters = new DogParameters
+            {
+                Attribute = "name",
+                OrderBy = "invalid_order",
+                PageNumber = 1,
+                PageSize = 10
+            };
 
             // Act
-            var result = await controller.GetDogs("name", "invalid_order", 1, 10);
+            var result = await controller.GetDogs(dogParameters);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Dog>>>(result);
@@ -68,7 +95,7 @@ namespace BridgeDogs.Tests.Controller
 
             Assert.NotNull(result);
             Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
-            Assert.Equal("Invalid order", badRequest.Value);
+            Assert.Equal("Invalid attribute or order", badRequest.Value);
         }
 
         [Fact]
@@ -77,9 +104,16 @@ namespace BridgeDogs.Tests.Controller
             // Arrange
             var mockRepository = new Mock<IDogRepository>();
             var controller = new DogsController(mockRepository.Object);
+            var dogParameters = new DogParameters
+            {
+                Attribute = "name",
+                OrderBy = "asc",
+                PageNumber = -1,
+                PageSize = -10
+            };
 
             // Act
-            var result = await controller.GetDogs("name", "asc", -1, -10);
+            var result = await controller.GetDogs(dogParameters);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Dog>>>(result);
@@ -95,6 +129,13 @@ namespace BridgeDogs.Tests.Controller
         {
             // Arrange
             var mockRepository = new Mock<IDogRepository>();
+            var dogParameters = new DogParameters
+            {
+                Attribute = "name",
+                OrderBy = "asc",
+                PageNumber = 3,
+                PageSize = 3
+            };
 
             // Must be sorted
             var dogs = new List<Dog>
@@ -112,12 +153,14 @@ namespace BridgeDogs.Tests.Controller
                 new Dog { Name = "Shab", Color = "black", TailLength = 13, Weight = 48 },
                 new Dog { Name = "Test", Color = "black", TailLength = 13, Weight = 48 }
             };
-            mockRepository.Setup(repo => repo.GetAllDogsAsync("name", "asc", 3, 3))
+
+
+            mockRepository.Setup(repo => repo.GetAllDogsAsync(dogParameters))
                 .ReturnsAsync(dogs.Skip(6).Take(3).ToList());
             var controller = new DogsController(mockRepository.Object);
 
             // Act
-            var result = await controller.GetDogs("name", "asc", 3, 3);
+            var result = await controller.GetDogs(dogParameters);
 
             // Assert
             var actionResult = Assert.IsType<ActionResult<IEnumerable<Dog>>>(result);
@@ -127,7 +170,7 @@ namespace BridgeDogs.Tests.Controller
             Assert.NotNull(result);
             Assert.Equal(3, dogsList.Count);
             Assert.Equal("David", dogsList[0].Name);
-            Assert.Equal("King", dogsList[dogsList.Count - 1].Name);
+            Assert.Equal("King", dogsList[^1].Name);
         }
 
         [Fact]
