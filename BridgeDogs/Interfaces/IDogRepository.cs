@@ -4,7 +4,7 @@ namespace BridgeDogs.Interfaces
 {
     public interface IDogRepository
     {
-        Task<IEnumerable<Dog>> GetAllDogsAsync(string attribute = "name", string order = "asc", int pageNumber = 1, int pageSize = 10);
+        Task<IEnumerable<Dog>> GetAllDogsAsync(DogParameters dogParameters);
 
         Task<Dog> CreateDogAsync(Dog dog);
 

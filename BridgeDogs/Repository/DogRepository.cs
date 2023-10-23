@@ -2,6 +2,7 @@
 using BridgeDogs.Interfaces;
 using BridgeDogs.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Dynamic.Core;
 
 namespace BridgeDogs.Repository
 {
@@ -14,68 +15,29 @@ namespace BridgeDogs.Repository
             _context = context;
         }
 
-        // TODO: Perhaps this is very naive approach. But it is ME who created it; by myself.
-        // Better Guide: https://code-maze.com/paging-aspnet-core-webapi/
-        public async Task<IEnumerable<Dog>> GetAllDogsAsync(string attribute = "name", string order = "asc", int pageNumber = 1, int pageSize = 10)
+        public async Task<IEnumerable<Dog>> GetAllDogsAsync(DogParameters dogParameters)
         {
-            switch (attribute.ToLower())
+            var query = _context.Dogs.AsQueryable();
+            if (dogParameters.OrderBy == "asc")
             {
-                case "name":
-                    return (order == "asc")
-                        ? await _context.Dogs.OrderBy(d => d.Name)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync()
-                        : await _context.Dogs.OrderByDescending(d => d.Name)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync();
-                case "color":
-                    return (order == "asc")
-                        ? await _context.Dogs.OrderBy(d => d.Color)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync()
-                        : await _context.Dogs.OrderByDescending(d => d.Color)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync();
-                case "tail_length":
-                    return (order == "asc")
-                        ? await _context.Dogs.OrderBy(d => d.TailLength)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync()
-                        : await _context.Dogs.OrderByDescending(d => d.TailLength)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync();
-                default:
-                    return (order == "asc")
-                        ? await _context.Dogs.OrderBy(d => d.Weight)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync()
-                        : await _context.Dogs.OrderByDescending(d => d.Weight)
-                            .Skip((pageNumber - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToListAsync();
+                query = query.OrderBy($"{dogParameters.Attribute} asc");
             }
+            else
+            {
+                query = query.OrderBy($"{dogParameters.Attribute} desc");
+            }
+
+            return await query
+                .Skip((dogParameters.PageNumber - 1) * dogParameters.PageSize)
+                .Take(dogParameters.PageSize)
+                .ToListAsync();
         }
 
         public async Task<Dog> CreateDogAsync(Dog dog)
         {
             _context.Dogs.Add(dog);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return dog;
-            }
-            catch (DbUpdateException)
-            {
-                throw;
-            }
+            await _context.SaveChangesAsync();
+            return dog;
         }
 
         public async Task<bool> DogExistsAsync(string name)
